@@ -1,4 +1,7 @@
-class User {
+import '../database/orm.dart';
+
+class User implements Model {
+  @override
   final int? id;
   final String email;
   final String username;
@@ -19,31 +22,28 @@ class User {
     required this.createdAt,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'email': email,
-      'username': username,
-      'password_hash': passwordHash,
-      'coins': coins,
-      'total_score': totalScore,
-      'max_lives': maxLives,
-      'created_at': createdAt,
-    };
-  }
+  @override
+  Map<String, dynamic> toMap() => {
+        if (id != null) 'id': id,
+        'email': email,
+        'username': username,
+        'password_hash': passwordHash,
+        'coins': coins,
+        'total_score': totalScore,
+        'max_lives': maxLives,
+        'created_at': createdAt,
+      };
 
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
-      id: map['id'] as int?,
-      email: map['email'] as String,
-      username: map['username'] as String,
-      passwordHash: map['password_hash'] as String,
-      coins: map['coins'] as int? ?? 0,
-      totalScore: map['total_score'] as int? ?? 0,
-      maxLives: map['max_lives'] as int? ?? 3,
-      createdAt: map['created_at'] as String? ?? '',
-    );
-  }
+  factory User.fromMap(Map<String, dynamic> m) => User(
+        id: m['id'] as int?,
+        email: m['email'] as String,
+        username: m['username'] as String,
+        passwordHash: m['password_hash'] as String,
+        coins: m['coins'] as int? ?? 0,
+        totalScore: m['total_score'] as int? ?? 0,
+        maxLives: m['max_lives'] as int? ?? 3,
+        createdAt: m['created_at'] as String? ?? '',
+      );
 
   User copyWith({
     int? id,
@@ -54,16 +54,15 @@ class User {
     int? totalScore,
     int? maxLives,
     String? createdAt,
-  }) {
-    return User(
-      id: id ?? this.id,
-      email: email ?? this.email,
-      username: username ?? this.username,
-      passwordHash: passwordHash ?? this.passwordHash,
-      coins: coins ?? this.coins,
-      totalScore: totalScore ?? this.totalScore,
-      maxLives: maxLives ?? this.maxLives,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
+  }) =>
+      User(
+        id: id ?? this.id,
+        email: email ?? this.email,
+        username: username ?? this.username,
+        passwordHash: passwordHash ?? this.passwordHash,
+        coins: coins ?? this.coins,
+        totalScore: totalScore ?? this.totalScore,
+        maxLives: maxLives ?? this.maxLives,
+        createdAt: createdAt ?? this.createdAt,
+      );
 }

@@ -70,8 +70,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.email),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+                        .hasMatch(v.trim())) {
+                      return 'Enter a valid email address';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -81,8 +87,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (!RegExp(r'^[a-zA-Z0-9]{3,10}$').hasMatch(v.trim())) {
+                      return 'Username must be 3–10 alphanumeric characters';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -103,8 +114,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Required' : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (v.length < 8) return 'Minimum 8 characters';
+                    if (!v.contains(RegExp(r'[A-Z]'))) {
+                      return 'Must contain an uppercase letter';
+                    }
+                    if (!v.contains(RegExp(r'[a-z]'))) {
+                      return 'Must contain a lowercase letter';
+                    }
+                    if (!v.contains(RegExp(r'[0-9]'))) {
+                      return 'Must contain a digit';
+                    }
+                    if (!v.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]'))) {
+                      return 'Must contain a special character';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -115,8 +141,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.lock_outline),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Required' : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (v != _passwordCtrl.text) return 'Passwords do not match';
+                    return null;
+                  },
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

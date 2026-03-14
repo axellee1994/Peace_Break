@@ -1,7 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import 'repositories.dart';
 
 class AppDatabase {
@@ -78,9 +76,6 @@ class AppDatabase {
     await _seed(db);
   }
 
-  static String _hash(String p) =>
-      sha256.convert(utf8.encode(p)).toString();
-
   Future<void> _seed(Database db) async {
     final paddleFireId = await db.insert('shop_items', {
       'name': 'Paddle: Fire',
@@ -113,7 +108,8 @@ class AppDatabase {
       'description': 'Permanently increases your max lives by 1.',
     });
 
-    final hash = _hash('Password1!');
+    const hash =
+        '1d707811988069ca760826861d6d63a10e8c3b7f171c4441a6472ea58c11711b';
     final now = DateTime.now().toIso8601String();
 
     final seedUsers = [

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../database/app_database.dart';
+import '../models/stage_result.dart';
 import 'break_game.dart';
+import 'stages/stage_config.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -15,6 +17,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   BreakGame? _game;
   int _stageNumber = 1;
+  int _previousBestScore = 0;
 
   @override
   void didChangeDependencies() {
@@ -34,6 +37,10 @@ class _GameScreenState extends State<GameScreen> {
     final inv = await db.inventory.forUser(user.id!);
     final allShop = await db.shopItems.findAll();
     final shopMap = {for (final s in allShop) s.id!: s};
+
+    final existing =
+        await db.stageResults.forUserAndStage(user.id!, _stageNumber);
+    _previousBestScore = existing?.score ?? 0;
 
     Color? paddleColor;
     Color? ballColor;
@@ -77,6 +84,7 @@ class _GameScreenState extends State<GameScreen> {
 
     final score = game.scoreNotifier.value;
     final coins = game.coinsNotifier.value;
+    final oldBest = _previousBestScore;
 
     await AppDatabase().stageResults.upsertBest(
       userId: user.id!,
@@ -94,7 +102,7 @@ class _GameScreenState extends State<GameScreen> {
     await auth.refreshUser();
 
     if (!mounted) return;
-    _showWinDialog(score, coins);
+    _showWinDialog(score, coins, oldBest);
   }
 
   Future<void> _handleLoss(BreakGame game) async {
@@ -102,7 +110,8 @@ class _GameScreenState extends State<GameScreen> {
     _showLossDialog();
   }
 
-  void _showWinDialog(int score, int coins) {
+  void _showWinDialog(int score, int coins, int oldBest) {
+    final isNewBest = score > oldBest;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -126,6 +135,28 @@ class _GameScreenState extends State<GameScreen> {
                 const Text('Coins'),
               ]),
             ]),
+            if (oldBest > 0) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('Previous best: $oldBest pts',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  if (isNewBest)
+                    const Chip(
+                      label: Text('New Best!',
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.amber,
+                    )
+                  else
+                    const Text('Best kept',
+                        style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ],
           ],
         ),
         actions: [
@@ -178,6 +209,36 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  void _confirmExit() {
+    if (_game == null) return;
+    _game!.pauseEngine();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Exit Stage?'),
+        content: const Text(
+            'Your progress in this stage will be lost. Return to menu?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _game!.resumeEngine();
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushReplacementNamed(context, '/menu');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Exit', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_game == null) {
@@ -186,13 +247,17 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          GameWidget(game: _game!),
-          SafeArea(
-            child: _HudOverlay(game: _game!, stageNumber: _stageNumber),
-          ),
-        ],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            GameWidget(game: _game!),
+            _HudOverlay(
+              game: _game!,
+              stageNumber: _stageNumber,
+              onExit: _confirmExit,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -201,18 +266,24 @@ class _GameScreenState extends State<GameScreen> {
 class _HudOverlay extends StatelessWidget {
   final BreakGame game;
   final int stageNumber;
+  final VoidCallback onExit;
 
-  const _HudOverlay({required this.game, required this.stageNumber});
+  const _HudOverlay({
+    required this.game,
+    required this.stageNumber,
+    required this.onExit,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final stageName = StageConfig.get(stageNumber)?.name ?? 'Stage $stageNumber';
     return Container(
       height: 60,
       color: Colors.black.withOpacity(0.6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          Text('Stage $stageNumber',
+          Text(stageName,
               style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -251,7 +322,7 @@ class _HudOverlay extends StatelessWidget {
                       color: Colors.white, fontWeight: FontWeight.bold)),
             ]),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () => game.togglePause(),
             child: ValueListenableBuilder<GameState>(
@@ -264,6 +335,11 @@ class _HudOverlay extends StatelessWidget {
                 size: 22,
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onExit,
+            child: const Icon(Icons.exit_to_app, color: Colors.white, size: 22),
           ),
         ],
       ),
